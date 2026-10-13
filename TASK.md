@@ -65,6 +65,8 @@ docker compose logs -f api
 docker compose exec postgres psql -U app -d images
 ```
 
+To test with Postman instead of `curl`, follow [POSTMAN.md](POSTMAN.md).
+
 Code changes in `app/` reload on their own. The interactive API docs are at http://localhost:18000/docs and the MinIO console is at http://localhost:19001.
 
 ### Step 1: Create the tables
