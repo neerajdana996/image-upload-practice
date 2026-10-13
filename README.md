@@ -1,7 +1,7 @@
 # Image Upload Practice
 
 Starting point for an image upload service: FastAPI, MinIO and Postgres run with Docker Compose.
-So far the app only creates the MinIO client and makes sure the bucket exists on startup. There are no routes and nothing uses Postgres yet.
+So far the app only sets up its connections: on startup it checks the Postgres connection and makes sure the MinIO bucket exists. There are no routes or tables yet.
 
 ## Run
 
@@ -24,8 +24,9 @@ Host ports are set in `.env`. Postgres and MinIO use 5433 / 9100 / 9101 rather t
 
 ```
 app/
-  main.py      FastAPI app, ensures the bucket on startup
+  main.py      FastAPI app, checks Postgres and ensures the bucket on startup
   config.py    settings from environment
+  database.py  SQLAlchemy engine, session and Base
   storage.py   MinIO client and ensure_bucket
 ```
 
