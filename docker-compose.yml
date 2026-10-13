@@ -9,7 +9,6 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
       MINIO_BUCKET: ${MINIO_BUCKET:-images}
-      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-10}
     volumes:
       - ./app:/code/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload

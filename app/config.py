@@ -10,7 +10,5 @@ class Settings(BaseSettings):
     minio_bucket: str = "images"
     minio_secure: bool = False
 
-    max_upload_mb: int = 10
-
 
 settings = Settings()
