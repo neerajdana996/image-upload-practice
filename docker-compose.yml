@@ -9,6 +9,7 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
       MINIO_BUCKET: ${MINIO_BUCKET:-images}
+      MINIO_WEBHOOK_TOKEN: ${MINIO_WEBHOOK_TOKEN:-dev-webhook-token}
     volumes:
       - ./app:/code/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -43,6 +44,10 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      # Webhook notification target, ARN arn:minio:sqs::PRIMARY:webhook
+      MINIO_NOTIFY_WEBHOOK_ENABLE_PRIMARY: "on"
+      MINIO_NOTIFY_WEBHOOK_ENDPOINT_PRIMARY: http://api:8000/internal/minio-events
+      MINIO_NOTIFY_WEBHOOK_AUTH_TOKEN_PRIMARY: ${MINIO_WEBHOOK_TOKEN:-dev-webhook-token}
     volumes:
       - minio_data:/data
     healthcheck:

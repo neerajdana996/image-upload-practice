@@ -2,7 +2,7 @@
 
 Build an API where a client uploads images into an album. The file bytes go straight from the client to MinIO through a presigned URL and never pass through the API. The API must still find out when each upload has finished and record it.
 
-The repo already gives you the running stack, a MinIO client with the bucket created (`app/storage.py`), and a Postgres engine and session (`app/database.py`). Everything else is yours to build.
+The repo already gives you the running stack, a MinIO client with the bucket created (`app/storage.py`), a Postgres engine and session (`app/database.py`), and a MinIO webhook target pointed at the API. Everything else is yours to build.
 
 ## The flow
 
@@ -16,9 +16,10 @@ The repo already gives you the running stack, a MinIO client with the bucket cre
 
 This is the core of the task. Since the upload bypasses the API, something has to tell it. Use **MinIO bucket notifications**: MinIO calls a webhook on the API every time an object is created in the bucket.
 
-- Turn on a webhook target in the `minio` service in `docker-compose.yml` with `MINIO_NOTIFY_WEBHOOK_ENABLE_<NAME>`, `MINIO_NOTIFY_WEBHOOK_ENDPOINT_<NAME>` and `MINIO_NOTIFY_WEBHOOK_AUTH_TOKEN_<NAME>`. From inside the compose network the API is reachable at `http://api:8000`.
-- Subscribe the bucket to `s3:ObjectCreated:*` events for that target. Do this in code next to `ensure_bucket()` so a fresh `docker compose up` needs no manual steps.
-- Add a webhook endpoint to the API that receives the event, finds the image row from the object key, and marks it `uploaded`.
+- The webhook target is already configured on the `minio` service in `docker-compose.yml`. Its ARN is `arn:minio:sqs::PRIMARY:webhook`, and it posts to `http://api:8000/internal/minio-events`.
+- MinIO sends the token as an `Authorization: Bearer <token>` header. The API receives the same token in the `MINIO_WEBHOOK_TOKEN` environment variable.
+- Subscribe the bucket to `s3:ObjectCreated:*` events for that ARN. Nothing is subscribed yet, so no events are sent until you do. Do this in code next to `ensure_bucket()` so a fresh `docker compose up` needs no manual steps.
+- Add the `POST /internal/minio-events` endpoint to the API. It receives the event, finds the image row from the object key, and marks it `uploaded`.
 
 Do not rely on the client calling a "I'm done" endpoint. A client can crash, lie, or close the tab after the upload succeeds.
 
@@ -53,7 +54,7 @@ Do not rely on the client calling a "I'm done" endpoint. A client can crash, lie
 ## Things that will trip you up
 
 - **Presigned URL host.** The API talks to MinIO at `minio:9000`, a name that only resolves inside Docker. A URL signed for that host is useless to a client on your machine, and you cannot just rewrite the host afterwards because the host is part of the signature. Sign with a client configured for the public address (`localhost:19000`). Give that client a fixed `region` so signing does not need a network call to an address the container cannot reach.
-- **Startup order.** MinIO starts before the API, so the webhook endpoint is not up when MinIO first looks for it. Check how MinIO behaves in that case and make the subscription step survive it.
+- **Missed events.** The webhook target has no queue directory, so MinIO does not store events for later delivery. An upload that completes while the API is down may never be reported.
 - **Event payload.** The object key in the event is URL-encoded, and the event's `Key` field is prefixed with the bucket name.
 - **Content type.** If the content type is part of the signed request, the client's `PUT` must send exactly the same `Content-Type` header.
 
