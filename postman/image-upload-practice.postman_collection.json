@@ -1,0 +1,596 @@
+{
+  "info": {
+    "name": "Image Upload Practice",
+    "description": "Requests for the task in TASK.md. Select the 'local' environment before sending. See POSTMAN.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "item": [
+    {
+      "name": "Flow",
+      "description": "Run top to bottom. Each request saves the values the next one needs.",
+      "item": [
+        {
+          "name": "Create album",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/albums",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "albums"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Holiday\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"album created\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"has id and name\", () => {",
+                  "    pm.expect(body.id).to.be.a(\"string\");",
+                  "    pm.expect(body.name).to.eql(\"Holiday\");",
+                  "});",
+                  "pm.environment.set(\"album_id\", body.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get album",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/albums/{{album_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "albums",
+                "{{album_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"album found\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"same album\", () => pm.expect(pm.response.json().id).to.eql(pm.environment.get(\"album_id\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Request an upload URL",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/albums/{{album_id}}/images",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "albums",
+                "{{album_id}}",
+                "images"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filename\": \"photo.png\",\n  \"content_type\": \"image/png\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"upload slot created\", () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"image is pending\", () => {",
+                  "    pm.expect(body.status).to.eql(\"pending\");",
+                  "    pm.expect(body.size).to.be.null;",
+                  "    pm.expect(body.url).to.be.null;",
+                  "});",
+                  "pm.test(\"upload_url points at MinIO on localhost\", () => {",
+                  "    pm.expect(body.upload_url).to.include(\"http://localhost:19000/\");",
+                  "});",
+                  "pm.environment.set(\"image_id\", body.id);",
+                  "pm.environment.set(\"upload_url\", body.upload_url);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload the file",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "image/png"
+              }
+            ],
+            "url": {
+              "raw": "{{upload_url}}",
+              "host": [
+                "{{upload_url}}"
+              ],
+              "path": []
+            },
+            "body": {
+              "mode": "file",
+              "file": {
+                "src": ""
+              }
+            },
+            "description": "Goes to MinIO, not the API. In the Body tab choose 'binary' and select an image file before sending. Send this one by hand; the collection runner usually cannot read local files.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"file stored in MinIO\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check the image status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/albums/{{album_id}}/images/{{image_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "albums",
+                "{{album_id}}",
+                "images",
+                "{{image_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"image found\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"image is uploaded\", () => pm.expect(body.status).to.eql(\"uploaded\"));",
+                  "pm.test(\"has size, uploaded_at and url\", () => {",
+                  "    pm.expect(body.size).to.be.above(0);",
+                  "    pm.expect(body.uploaded_at).to.be.a(\"string\");",
+                  "    pm.expect(body.url).to.include(\"http://localhost:19000/\");",
+                  "});",
+                  "pm.test(\"upload_url is not returned here\", () => pm.expect(body).to.not.have.property(\"upload_url\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List album images",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/albums/{{album_id}}/images",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "albums",
+                "{{album_id}}",
+                "images"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"list returned\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"contains the image\", () => {",
+                  "    const ids = pm.response.json().map((i) => i.id);",
+                  "    pm.expect(ids).to.include(pm.environment.get(\"image_id\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Webhook",
+      "description": "Calls the webhook by hand. Run after the Flow folder.",
+      "item": [
+        {
+          "name": "Duplicate event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{webhook_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/internal/minio-events",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "internal",
+                "minio-events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"EventName\": \"s3:ObjectCreated:Put\",\n  \"Key\": \"images/albums/{{album_id}}/{{image_id}}.png\",\n  \"Records\": [\n    {\n      \"eventName\": \"s3:ObjectCreated:Put\",\n      \"s3\": {\n        \"bucket\": {\n          \"name\": \"images\"\n        },\n        \"object\": {\n          \"key\": \"albums%2F{{album_id}}%2F{{image_id}}.png\",\n          \"size\": 12345,\n          \"contentType\": \"image/png\"\n        }\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Send after the image is already uploaded. The row must not change."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"duplicate accepted\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "No token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/internal/minio-events",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "internal",
+                "minio-events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"EventName\": \"s3:ObjectCreated:Put\",\n  \"Key\": \"images/albums/{{album_id}}/{{image_id}}.png\",\n  \"Records\": [\n    {\n      \"eventName\": \"s3:ObjectCreated:Put\",\n      \"s3\": {\n        \"bucket\": {\n          \"name\": \"images\"\n        },\n        \"object\": {\n          \"key\": \"albums%2F{{album_id}}%2F{{image_id}}.png\",\n          \"size\": 12345,\n          \"contentType\": \"image/png\"\n        }\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"rejected without token\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Wrong token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer wrong"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/internal/minio-events",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "internal",
+                "minio-events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"EventName\": \"s3:ObjectCreated:Put\",\n  \"Key\": \"images/albums/{{album_id}}/{{image_id}}.png\",\n  \"Records\": [\n    {\n      \"eventName\": \"s3:ObjectCreated:Put\",\n      \"s3\": {\n        \"bucket\": {\n          \"name\": \"images\"\n        },\n        \"object\": {\n          \"key\": \"albums%2F{{album_id}}%2F{{image_id}}.png\",\n          \"size\": 12345,\n          \"contentType\": \"image/png\"\n        }\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"rejected with wrong token\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown object",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{webhook_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/internal/minio-events",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "internal",
+                "minio-events"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"EventName\": \"s3:ObjectCreated:Put\",\n  \"Key\": \"images/albums/{{album_id}}/00000000-0000-4000-8000-000000000000.png\",\n  \"Records\": [\n    {\n      \"eventName\": \"s3:ObjectCreated:Put\",\n      \"s3\": {\n        \"bucket\": {\n          \"name\": \"images\"\n        },\n        \"object\": {\n          \"key\": \"albums%2F{{album_id}}%2F00000000-0000-4000-8000-000000000000.png\",\n          \"size\": 12345,\n          \"contentType\": \"image/png\"\n        }\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "No image row matches this key. The API logs it and still answers 200."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"unknown key accepted\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Error cases",
+      "description": "Run after 'Create album'.",
+      "item": [
+        {
+          "name": "Album not found",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/albums/00000000-0000-4000-8000-000000000000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "albums",
+                "00000000-0000-4000-8000-000000000000"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404 for unknown album\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload URL for unknown album",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/albums/00000000-0000-4000-8000-000000000000/images",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "albums",
+                "00000000-0000-4000-8000-000000000000",
+                "images"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filename\": \"photo.png\",\n  \"content_type\": \"image/png\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404 for unknown album\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload URL for a non-image",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/albums/{{album_id}}/images",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "albums",
+                "{{album_id}}",
+                "images"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filename\": \"notes.txt\",\n  \"content_type\": \"text/plain\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"415 for non-image\", () => pm.response.to.have.status(415));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Image not found",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/albums/{{album_id}}/images/00000000-0000-4000-8000-000000000000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "albums",
+                "{{album_id}}",
+                "images",
+                "00000000-0000-4000-8000-000000000000"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404 for unknown image\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Missing field",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/albums",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "albums"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 when name is missing\", () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -4,6 +4,29 @@ This guide sets up Postman for the task in [TASK.md](TASK.md) and walks through 
 
 The requests use the paths, field names and status codes that the task requires, so they work unchanged against a correct implementation.
 
+## Quick start: import the ready-made collection
+
+The `postman/` folder has everything below already built.
+
+1. Install the Postman desktop app. The web version cannot reach `localhost` without extra setup.
+2. Choose **Import** and select both files:
+   - `postman/image-upload-practice.postman_collection.json`
+   - `postman/local.postman_environment.json`
+3. Select `local` in the environment dropdown at the top right.
+4. Open the **Flow** folder and send the requests from top to bottom. For "Upload the file", go to the **Body** tab, choose **binary**, and select an image from your computer first.
+
+The collection has three folders:
+
+| Folder | What it covers |
+| --- | --- |
+| Flow | Create an album, request an upload URL, upload, then confirm the image is `uploaded` |
+| Webhook | Calling the webhook by hand: duplicate event, no token, wrong token, unknown object |
+| Error cases | 404, 415 and 422 responses |
+
+Every request has tests, shown in the **Test Results** tab of the response. A request fails with 404 until you have built its endpoint, so expect red at the start and work towards all green.
+
+The rest of this guide explains how the collection is put together, so you can build or change requests yourself.
+
 ## 1. Install and create a collection
 
 1. Install the Postman desktop app. The web version cannot reach `localhost` without extra setup.
