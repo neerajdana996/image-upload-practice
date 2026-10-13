@@ -27,29 +27,91 @@ Do not rely on the client calling a "I'm done" endpoint. A client can crash, lie
 
 **Data**
 
-- `albums`: id, name, created time.
-- `images`: id, album id, original filename, content type, object key, status (`pending` or `uploaded`), size, created time, uploaded time.
+- `albums`: `id`, `name`, `created_at`.
+- `images`: `id`, `album_id`, `filename`, `content_type`, `object_key`, `status` (`pending` or `uploaded`), `size`, `created_at`, `uploaded_at`.
 - Object keys follow `albums/{album_id}/{image_id}{extension}` so the webhook can map a key back to a row. Never put the client's filename in the key.
 
-**Endpoints** (names are a suggestion)
+**Endpoints**
 
-| Method | Path | What it does |
-| --- | --- | --- |
-| POST | `/albums` | Create an album |
-| GET | `/albums/{album_id}` | Album details |
-| POST | `/albums/{album_id}/images` | Create a pending image, return a presigned `PUT` URL |
-| GET | `/albums/{album_id}/images` | List images with status; uploaded ones include a presigned `GET` URL |
-| GET | `/albums/{album_id}/images/{image_id}` | One image, so a client can poll its status |
-| POST | `/internal/minio-events` | Webhook called by MinIO |
+The paths, field names and status codes below are required. Use them exactly, so the requests in [POSTMAN.md](POSTMAN.md) work against your API without changes.
+
+| Method | Path | What it does | Success |
+| --- | --- | --- | --- |
+| POST | `/albums` | Create an album | 201, album |
+| GET | `/albums/{album_id}` | Album details | 200, album |
+| POST | `/albums/{album_id}/images` | Create a pending image, return a presigned `PUT` URL | 201, image with `upload_url` |
+| GET | `/albums/{album_id}/images` | List the album's images | 200, list of images |
+| GET | `/albums/{album_id}/images/{image_id}` | One image, so a client can poll its status | 200, image |
+| POST | `/internal/minio-events` | Webhook called by MinIO | 200 |
+
+**Request bodies**
+
+`POST /albums`
+
+```json
+{
+  "name": "Holiday"
+}
+```
+
+`POST /albums/{album_id}/images`
+
+```json
+{
+  "filename": "photo.png",
+  "content_type": "image/png"
+}
+```
+
+**Response bodies**
+
+Album:
+
+```json
+{
+  "id": "5f0c2a4e-8f6b-4a57-9d0e-0f4b3a1c9e21",
+  "name": "Holiday",
+  "created_at": "2026-10-13T08:30:00Z"
+}
+```
+
+Image:
+
+```json
+{
+  "id": "b7a1d2c3-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+  "album_id": "5f0c2a4e-8f6b-4a57-9d0e-0f4b3a1c9e21",
+  "filename": "photo.png",
+  "content_type": "image/png",
+  "status": "uploaded",
+  "size": 48213,
+  "created_at": "2026-10-13T08:31:00Z",
+  "uploaded_at": "2026-10-13T08:31:04Z",
+  "url": "http://localhost:19000/images/albums/..."
+}
+```
+
+- `status` is `pending` or `uploaded`.
+- `size`, `uploaded_at` and `url` are `null` while the image is `pending`.
+- `url` is a presigned `GET` URL for viewing the file.
+- The response to `POST /albums/{album_id}/images` is the same image object with one extra field, `upload_url`, holding the presigned `PUT` URL. No other response includes `upload_url`.
+- `object_key` is internal and is not returned.
+
+**Error responses**
+
+| Status | When |
+| --- | --- |
+| 404 | The album or image does not exist, or the image is not in that album |
+| 415 | `content_type` does not start with `image/` |
+| 401 | The webhook is called without the correct token |
+| 422 | The request body is missing a field or an id is malformed. FastAPI does this for you. |
 
 **Rules**
 
-- Only `image/*` content types get an upload URL.
 - Presigned URLs expire, 10 minutes or less.
 - The webhook rejects requests without the correct auth token.
 - The webhook is idempotent. MinIO can deliver the same event more than once.
 - An event for a key that matches no row is logged and answered with a 2xx, not an error, so MinIO does not keep retrying it.
-- An upload to an album that does not exist returns 404.
 
 ## Step by step
 

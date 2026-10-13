@@ -2,7 +2,7 @@
 
 This guide sets up Postman for the task in [TASK.md](TASK.md) and walks through testing every endpoint. Add each request as you finish the matching step of the task.
 
-The field names used here (`name`, `filename`, `content_type`, `id`, `upload_url`, `status`, `url`) are suggestions. If your API uses different names, change the bodies and scripts to match.
+The requests use the paths, field names and status codes that the task requires, so they work unchanged against a correct implementation.
 
 ## 1. Install and create a collection
 
