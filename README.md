@@ -3,6 +3,8 @@
 Starting point for an image upload service: FastAPI, MinIO and Postgres run with Docker Compose.
 So far the app only sets up its connections: on startup it checks the Postgres connection and makes sure the MinIO bucket exists. There are no routes or tables yet.
 
+The assignment to build on top of this is in [TASK.md](TASK.md).
+
 ## Run
 
 ```bash
