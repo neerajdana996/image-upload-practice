@@ -14,13 +14,13 @@ docker compose up -d --build
 
 | Service       | URL                                                  |
 | ------------- | ---------------------------------------------------- |
-| API docs      | http://localhost:8000/docs                           |
-| MinIO console | http://localhost:9101 (`minioadmin` / `minioadmin123`) |
-| MinIO S3 API  | http://localhost:9100                                |
-| Postgres      | `localhost:5433` (`app` / `app_password`, db `images`) |
+| API docs      | http://localhost:18000/docs                           |
+| MinIO console | http://localhost:19001 (`minioadmin` / `minioadmin123`) |
+| MinIO S3 API  | http://localhost:19000                                |
+| Postgres      | `localhost:15432` (`app` / `app_password`, db `images`) |
 
-Host ports are set in `.env`. Postgres and MinIO use 5433 / 9100 / 9101 rather than the usual
-5432 / 9000 / 9001 so they don't clash with other local stacks.
+All host ports are in the 1xxxx range (18000, 15432, 19000, 19001) so they don't clash with other local stacks
+using the standard ports. If one is still taken on your machine, change it in `.env`.
 
 ## Layout
 

@@ -52,7 +52,7 @@ Do not rely on the client calling a "I'm done" endpoint. A client can crash, lie
 
 ## Things that will trip you up
 
-- **Presigned URL host.** The API talks to MinIO at `minio:9000`, a name that only resolves inside Docker. A URL signed for that host is useless to a client on your machine, and you cannot just rewrite the host afterwards because the host is part of the signature. Sign with a client configured for the public address (`localhost:9100`). Give that client a fixed `region` so signing does not need a network call to an address the container cannot reach.
+- **Presigned URL host.** The API talks to MinIO at `minio:9000`, a name that only resolves inside Docker. A URL signed for that host is useless to a client on your machine, and you cannot just rewrite the host afterwards because the host is part of the signature. Sign with a client configured for the public address (`localhost:19000`). Give that client a fixed `region` so signing does not need a network call to an address the container cannot reach.
 - **Startup order.** MinIO starts before the API, so the webhook endpoint is not up when MinIO first looks for it. Check how MinIO behaves in that case and make the subscription step survive it.
 - **Event payload.** The object key in the event is URL-encoded, and the event's `Key` field is prefixed with the bucket name.
 - **Content type.** If the content type is part of the signed request, the client's `PUT` must send exactly the same `Content-Type` header.
